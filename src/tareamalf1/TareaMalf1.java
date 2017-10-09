@@ -15,6 +15,66 @@ public class TareaMalf1 {
     
     
     public TareaMalf1(){
+        Digraph g = new Digraph();
+        // Caso (a.b)*
+        /*
+        Nodo nodo0 = new Nodo(0);
+        nodo0.addTransicion(0, 'a', 0);
+        nodo0.addTransicion(0, 'b', 0);
+        nodo0.addTransicion(0, '_', 1);
+        nodo0.addTransicion(0, '_', 5);
+        
+        Nodo nodo1 = new Nodo(1);
+        nodo1.addTransicion(1, 'a', 2);
+        
+        Nodo nodo2 = new Nodo(2);
+        nodo2.addTransicion(2, '_', 3);
+        
+        Nodo nodo3 = new Nodo(3);
+        nodo3.addTransicion(3,'b',4);
+        
+        Nodo nodo4 = new Nodo(4);
+        nodo4.addTransicion(4, '_', 1);
+        nodo4.addTransicion(4, '_', 5);
+        
+        Nodo nodo5 = new Nodo(5);
+        
+        g.addNodo(nodo0);
+        g.addNodo(nodo1);
+        g.addNodo(nodo2);
+        g.addNodo(nodo3);
+        g.addNodo(nodo4);
+        g.addNodo(nodo5);
+        */
+        
+        // Caso a.b
+        Nodo nodo0 = new Nodo(0);
+        nodo0.addTransicion(0, 'a', 0);
+        nodo0.addTransicion(0, 'b', 0);
+        nodo0.addTransicion(0, 'a', 1);
+        
+        Nodo nodo1 = new Nodo(1);
+        nodo1.addTransicion(1, '_', 2);
+        
+        Nodo nodo2 = new Nodo(2);
+        nodo2.addTransicion(2, 'b', 3);
+        
+        Nodo nodo3 = new Nodo(3);
+        
+        g.addNodo(nodo0);
+        g.addNodo(nodo1);
+        g.addNodo(nodo2);
+        g.addNodo(nodo3);
+        
+     
+        
+        AFNDToAFD(g);
+
+        
+        
+        
+        
+
     }
 
     /**
@@ -24,11 +84,237 @@ public class TareaMalf1 {
         // TODO code application logic here
 
         TareaMalf1 e = new TareaMalf1();
+
+        
+        
         //e.thompsonConcatenacion("a.(b.c)");
-        e.thompsonUnion("a|b");
+        //e.thompsonUnion("a|b");
+        
        
     }
     
+    private String codigoEstado(ArrayList<Integer> nodos){
+        String cod = "";
+        int n = nodos.size();
+        for (int i = 0; i < n; i++) {
+            int num = nodos.get(i);
+            cod = cod+String.valueOf(num);
+        }
+        return cod;
+    }
+    
+    public void AFNDToAFD(Digraph afnd){
+        char alfabeto[] = {'a','b'}; //este alfabeto es de prueba....pueden venir mas elementos
+              
+        // estados a los que puedo llegar desde el 0 con el caracter vacio
+        ArrayList<Integer> estadoInicial = clausuraVacio(afnd, 0);
+        
+        ArrayList<String> codEstados = new ArrayList<>();
+        String cod = codigoEstado(estadoInicial);
+        codEstados.add(cod);
+        
+        Digraph afd = new Digraph();
+        
+        ArrayList<ArrayList<Integer>> conjuntoEstados = new ArrayList<>();
+        conjuntoEstados.add(estadoInicial);
+        
+        int contNodos = 0;
+        Nodo estado = new Nodo(contNodos);
+        contNodos++;
+        afd.addNodo(estado);
+        
+        // Lista que guardara el conjunto de estados nuevos
+        ArrayList<Integer> nuevoEstado = new ArrayList<>();
+        
+        // recorro los nodos del afd
+        for (int i = 0; i < conjuntoEstados.size(); i++) {
+            estadoInicial = conjuntoEstados.get(i);
+            // recorro el alfabeto
+            for (int j = 0; j < alfabeto.length; j++) {
+                nuevoEstado = new ArrayList<>();
+                char c = alfabeto[j];
+                int n = estadoInicial.size();
+                ArrayList<Integer> estadosClausura = new ArrayList<>();
+                for (int k = 0; k < n; k++) {
+                    int s = estadoInicial.get(k);
+                    estadosClausura = clausura(afnd, s, c);
+                    // Compruebo que los elementos que agrege al nuevo estado no se encunetren repetidos
+                    for (int l = 0; l < estadosClausura.size(); l++) {
+                        int num = estadosClausura.get(l);
+                        if (!nuevoEstado.contains(num)){
+                            nuevoEstado.add(num);
+                        }
+                    }
+                }
+                
+                // veo la clausura de vacio con los elementos del nuevo estado
+                for (int k = 0; k < nuevoEstado.size(); k++) {
+                    int num = nuevoEstado.get(k);
+                    estadosClausura = clausuraVacio(afnd, num);
+                    for (int l = 0; l < estadosClausura.size(); l++) {
+                        int e = estadosClausura.get(l);
+                        if (!nuevoEstado.contains(e)){
+                            nuevoEstado.add(e);
+                        }
+                    }
+                }
+                
+                cod = codigoEstado(nuevoEstado);
+                // Compruebo que el nuevo estado que quiero agregar al afd no este repetido
+                          
+                if (!codEstados.contains(cod)){
+                    codEstados.add(cod);
+                    Nodo nuevoNodo = new Nodo(contNodos);
+                    contNodos++;
+                    int from = i;
+                    int to = i+1;
+                    estado = afd.adj.get(i);
+                    estado.addTransicion(from, c, to);   
+                    afd.addNodo(nuevoNodo);
+                    conjuntoEstados.add(nuevoEstado);
+                }
+                else{
+                    int from = i;
+                    int to = codEstados.indexOf(cod);
+                    estado.addTransicion(from, c, to);          
+                }
+                     
+            }
+        }
+
+        mostrarGrafo(afd);
+        
+        
+    }
+    
+    private ArrayList<Integer> clausura(Digraph g, int s, char c){
+        ArrayList<Integer> estados = new ArrayList<>();
+        Nodo nodo = g.adj.get(s);
+        int numTransiciones = nodo.numTransiciones();
+        for (int i = 0; i < numTransiciones; i++) {
+            Transicion t = nodo.getTransicion(i);
+            char trance = t.getTrance();
+            if (trance == c){
+                int to = t.getTo();
+                estados.add(to);
+            }
+        }
+        return estados;
+    }
+    private ArrayList<Integer> clausuraVacio(Digraph g, int s){
+        char vacio = '_';
+        ArrayList<Integer> nodos = new ArrayList<>();
+        nodos.add(s);
+        for (int i = 0; i < nodos.size(); i++) {
+            s = nodos.get(i);
+            Nodo nodo = g.adj.get(s);
+            int n = nodo.numTransiciones();
+            for (int j = 0; j < n; j++) {
+                Transicion t = nodo.getTransicion(j);
+                char trans = t.getTrance();
+                if (vacio == trans){
+                    // me aseguro que no hayan elementos repetidos
+                    int to = t.getTo();
+                    if (!nodos.contains(to)){
+                        nodos.add(to);
+                    }                    
+                }
+            }
+        }
+        return nodos;     
+    }
+    
+    public void ErToAFND(){
+        Digraph g = new Digraph();
+        String expresion = "a.b.c";
+        String cadenas[] = separarCadenas(expresion);
+        
+        String expr = cadenas[2];
+        
+        if (expr.equals(".")){
+            thompsonConcatenacion(g, 0, expresion);
+        }
+        else if (expr.equals("|")){
+            
+        }
+        mostrarGrafo(g);
+        
+        
+    }
+    
+    public void mostrarGrafo(Digraph g){
+        int n = g.adj.size();
+        for (int i = 0; i < n; i++) {
+            Nodo nodo = g.adj.get(i);
+            nodo.info();
+        }
+    }
+    
+    public String[] separarCadenas(String expresion){
+        String cadenas[] = new String[3];
+        int n = expresion.length();
+        char caracteres[] = expresion.toCharArray();
+        int index = -1;
+        String expr = "";
+        for (int i = 0; i < n; i++) {
+            if (caracteres[i] == '|' || caracteres[i] == '.'){
+                index = i;
+                expr = String.valueOf(caracteres[i]);
+                break;
+            }
+        }
+        String exp1 = expresion.substring(0,index);
+        String exp2 = expresion.substring(index+1);
+        
+        cadenas[0] = exp1;
+        cadenas[1] = exp2;
+        cadenas[2] = expr;
+        
+        return cadenas;
+
+    }
+    
+    public void thompsonConcatenacion(Digraph g, int v, String expresion){
+        ArrayList<String> subsER = new ArrayList<>();
+        String cadenas[] = separarCadenas(expresion);
+        subsER.add(0,cadenas[0]);
+        subsER.add(1,cadenas[1]);
+        int s = v;
+        while(!subsER.isEmpty()){
+            String th = subsER.get(0);
+            subsER.remove(0);
+            int n = th.length();
+            if (n == 1){
+                char c = th.charAt(0);
+                s = thompsonBase(g, s, c);
+            }
+            else{
+                cadenas = separarCadenas(th);
+                String op = cadenas[2];
+                if (op.equals(".")){
+                    thompsonConcatenacion(g, s, th);
+                }
+                else if (op.equals("|")){
+                
+                }
+            }
+        }
+    }
+    
+    public void thopsonUnion(Digraph g, int v, String expresion){
+        
+    }
+    
+    public int thompsonBase(Digraph g, int v, char c){
+        Nodo from = new Nodo(v);
+        int w = v + 1;
+        Nodo to = new Nodo(w);
+        from.addTransicion(v, c, w);
+        g.addNodo(from);
+        g.addNodo(to);
+        
+        return w;
+    }
     
 
         
@@ -91,7 +377,6 @@ public class TareaMalf1 {
         subsER.add(1, exp2);
         
         int endEtapa = -1;
-        int i = 0;
         int v = 0;
         int w = 0;
         int s = 0;
@@ -118,7 +403,7 @@ public class TareaMalf1 {
                 g.addNodo(nodo);
                 v++;
 
-                nodo = new Nodo(v);
+                nodo = new Nodo(w);
                 g.addNodo(nodo);
                 Transicion t = new Transicion(w,'_',endEtapa);
 
@@ -129,6 +414,7 @@ public class TareaMalf1 {
                 endEtapa--;    
             }
         }
+        
         int n = transFinales.size();
         for (int j = n-1; j >= 0; j--) {
             Transicion t = transFinales.get(j);
@@ -137,9 +423,15 @@ public class TareaMalf1 {
             nodo = g.adj.get(from);
             nodo.addTransicion(from,'_',to); 
         }
+        
+        int num = g.adj.size();
+        for (int j = 0; j < num; j++) {
+            nodo = g.adj.get(j);
+            nodo.info();
+        }
 
     }
-    
+    /*
     private String[] separarCadenas(String expresion){
         String cadenas[] = new String[2];
         String exp1;
@@ -179,7 +471,7 @@ public class TareaMalf1 {
         return cadenas;
         
     }
-    
+    */
     
     
     public class Nodo{
@@ -193,6 +485,14 @@ public class TareaMalf1 {
         
         public void addTransicion(int v, char c, int w){
             this.trans.add(new Transicion(v,c,w));
+        }
+        
+        public int numTransiciones(){
+            return this.trans.size();
+        }
+        
+        public Transicion getTransicion(int t){
+            return this.trans.get(t);
         }
         
         public void info(){
